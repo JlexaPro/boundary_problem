@@ -1,4 +1,4 @@
-"""Лабораторная работа №1. Метод коллокаций
+"""Лабораторная работа №1. Метод прогонки
 Выполнил: Калачиков Алексей Юрьевич
 Группа: 4-ИАИТ-10
 Вариант: 7"""
@@ -6,85 +6,104 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from sympy import *
+from prettytable import PrettyTable
 
-t = Symbol('t')
-
+print(
+    "Краевая задача вида: \n -p(x) * y'' + q(x) * y' + r(x) * y = f(x), a<=x<=b, "
+    "\n alpha_1 * y(a) - alpha_2 * y'(a) = alpha, "
+    "\n beta_1 * y(b) + beta_2 * y'(b) = beta. \nЧисленное решение представляет порядок точности O(h).")
 # Исходные данные для задачи
-n = 8
-alpha_1 = 1
-alpha_2 = -1
-beta_1 = 0
-beta_2 = 1
-alpha = 1
-beta = 0
-a = 0
-b = 1
-x = (b + a + t * (b - a)) / 2
-x_diff = diff(x, t)
-p = simplify(1 / ((x - 2) * x_diff ** 2))
-q = simplify((1 / x_diff))
-r = 1
-f = simplify(2 * exp(-x))
-
-# Вычисление
-alpha_2_new = alpha_2 * 2 / (b - a)
-beta_2_new = beta_2 * 2 / (b - a)
-d_1_for_z = (beta * alpha_1 - alpha * beta_1) / ((alpha_1 + alpha_2_new) * beta_1 + (beta_1 + beta_2_new) * alpha_1)
-d_2_for_z = (alpha * (beta_1 + beta_2_new) + beta * (alpha_1 + alpha_2_new)) / (
-        alpha_1 * (beta_1 + beta_2_new) + beta_1 * (alpha_1 + alpha_2_new))
-c_1_for_omega_1 = -(beta_1 * (3 * alpha_2_new + alpha_1) + alpha_1 * (3 * beta_2_new + beta_1)) / (
-        beta_1 * (alpha_1 + alpha_2_new) + alpha_1 * (beta_1 + beta_2_new))
-d_1_for_omega_1 = ((3 * alpha_2_new + alpha_1) * (beta_1 + beta_2_new) - (alpha_1 + alpha_2_new) * (
-        3 * beta_2_new + beta_1)) / (alpha_1 * (beta_1 + beta_2_new) + beta_1 * (alpha_1 + alpha_2_new))
-c_2_for_omega_2 = (beta_1 * (2 * alpha_2_new + alpha_1) - alpha_1 * (beta_1 + 2 * beta_2_new)) / (
-        alpha_1 * (beta_1 + beta_2_new) + beta_1 * (alpha_1 + alpha_2_new))
-d_2_for_omega_2 = -((beta_1 + beta_2_new) * (2 * alpha_2_new + alpha_1) + (beta_1 + 2 * beta_2_new) * (
-        alpha_2_new + alpha_1)) / (alpha_1 * (beta_1 + beta_2_new) + beta_1 * (alpha_1 + alpha_2_new))
-z = d_1_for_z * t + d_2_for_z
-L_z = p * diff(z, t, 2) + q * diff(z, t) + r * z
-F = simplify(f - L_z)
-W = [t ** 3 + c_1_for_omega_1 * t + d_1_for_omega_1, t ** 2 + c_2_for_omega_2 * t + d_2_for_omega_2]
-grid = [math.cos((2 * i - 1) / (2 * n) * math.pi) for i in range(1, n)]
-for i in range(3, n):
-    W.append(
-        simplify((-1) ** (i - 3) / (2 ** (i - 3) * factorial(i - 3)) * diff((1 - t ** 2) ** (i + 2 - 3), t, i - 3)))
-L_i_j = [[float((p * diff(omega, t, 2) + q * diff(omega, t, 1) + r * omega).subs(t, nodes)) for omega in W] for nodes in
-         grid]
-right_part = [float(F.subs(t, i)) for i in grid]
-factors = np.linalg.solve(np.array(L_i_j), np.array(right_part))
-y = z
-for omega, factor in zip(W, factors):
-    y += omega * factor
-z = Symbol('z')
-analytical = [(x * exp(-x)).subs(t, (2 * z - b - a) / (b - a)).subs(z, (nodes * (b - a) + b + a) / 2) for nodes in grid]
-collocation_points = [(nodes * (b - a) + b + a) / 2 for nodes in grid]
-xx = np.linspace(a, b, 1000)
-yy = y.subs(t, (2 * z - b - a) / (b - a))
-approximate_points = [yy.subs(z, nodes) for nodes in collocation_points]
-analytical_pow_2 = [item ** 2 for item in analytical]
-Q_ocm = [(first - second) ** 2 for first, second in zip(analytical, approximate_points)]
+alpha_1 = 0.0
+alpha_2 = -1.0
+beta_1 = 1.0
+beta_2 = 0.0
+alpha = 32.5
+beta = 82.1
+n = 10
+a = 2.0
+b = 3.0
+h = (b - a) / n
+x_i_extended = [0.0] * (n + 2)
+for i in range(0, n + 2):
+    x_i_extended[i] = round(a - h / 2 + i * h, 5)
+print(f'\nРазбиение: {x_i_extended}')
+p = -1
+q = 1 / x_i_extended[i]
+r = -1
+p_i = [p] * (n + 2)
+r_i = [r] * (n + 2)
+q_i = [q] * (n + 2)
+A = [0.0] * (n + 2)
+A[n + 1] = beta_1 / 2 - beta_2 / h
+for i in range(1, n + 1):
+    A[i] = -p_i[i] / (h ** 2) - q_i[i] / (2 * h)
+B = [0.0] * (n + 2)
+B[0] = -alpha_1 / 2 - alpha_2 / h
+B[n + 1] = -(beta_2 / h + beta_1 / 2)
+for i in range(1, n + 1):
+    B[i] = -2 * p_i[i] / (h ** 2) - r_i[i]
+C = [0.0] * (n + 2)
+C[0] = alpha_1 / 2 - alpha_2 / h
+C[n + 1] = 0
+for i in range(1, n + 1):
+    C[i] = -p_i[i] / (h ** 2) + q_i[i] / (2 * h)
+G = [0.0] * (n + 2)
+G[0] = alpha
+G[n + 1] = beta
+for i in range(1, n + 1):
+    G[i] = 16 * x_i_extended[i] ** 2 - x_i_extended[i] ** 4 - math.log(x_i_extended[i])
+s = [0.0] * (n + 2)
+s[0] = C[0] / B[0]
+s[n + 1] = 0
+for i in range(1, n + 1):
+    s[i] = C[i] / (B[i] - A[i] * s[i - 1])
+t = [0.0] * (n + 2)
+t[0] = -G[0] / B[0]
+for i in range(1, n + 2):
+    t[i] = (A[i] * t[i - 1] - G[i]) / (B[i] - A[i] * s[i - 1])
+y_approximate = [0.0] * (n + 2)
+y_approximate[n + 1] = t[n + 1]
+for i in range(n, -1, -1):
+    y_approximate[i] = s[i] * y_approximate[i + 1] + t[i]
+y = [x ** 4 * math.log(x) for x in x_i_extended]
+y_pow_2 = [y_i ** 2 for y_i in y]
+Q_ocm = [(y_i - y_i_app) ** 2 for y_i, y_i_app in zip(y, y_approximate)]
 numerator = sum(Q_ocm)
-denominator = sum(analytical_pow_2)
+denominator = sum(y_pow_2)
+error = numerator / denominator * 100
+print(f'Погрешность = {round(error, 5)}\n')
 
+
+def approximation():
+    """Аппроксимация первого порядка, метод прогонки"""
+    my_table = PrettyTable()
+    my_table_names = ['i', "x_i", "A_i", "B_i", "C_i", "G_i", "s_i", "t_i", "y_i_approximate", "y_i"]
+    table_helper = [
+        [i for i in range(0, n + 2)],
+        [round(item, 5) for item in x_i_extended],
+        [round(item, 5) for item in A],
+        [round(item, 5) for item in B],
+        [round(item, 5) for item in C],
+        [round(item, 5) for item in G],
+        [round(item, 5) for item in s],
+        [round(item, 5) for item in t],
+        [round(item, 5) for item in y_approximate],
+        [round(item, 5) for item in y]
+    ]
+    for column, name_column in zip(table_helper, my_table_names):
+        my_table.add_column(name_column, column)
+    print(my_table)
 
 
 def builder():
     """Построение графика"""
-    approximate = lambdify(z, yy)(xx)
-    plt.plot(xx, np.transpose(approximate), color='black')
-    plt.plot(collocation_points, analytical, 'o', color='red')
+    solution = lambda z: z ** 4 * np.log(z)
+    domain = np.linspace(a - h / 2, b + h / 2, 100)
+    plt.plot(domain, solution(z=domain))
+    plt.scatter(x_i_extended, y_approximate)
     plt.show()
 
 
-def error():
-    """Вычисление ошибки"""
-    print(f"Error: {numerator / denominator * 100}%")
-
-
 if __name__ == '__main__':
+    approximation()
     builder()
-    print(f"Приближенное решение: {factors};")
-    error()
-
-
